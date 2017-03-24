@@ -1,0 +1,377 @@
+<!doctype html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<title>
+			Floppy Bards
+		</title>
+		<style>
+			* {
+				margin: 0px;
+				padding: 0px;
+			}
+			
+			body {
+				background-color: rgb(30, 30, 38);
+				text-align: center;
+			}
+		</style>
+	</head>
+	<body>
+		<script src="floppybards.js"></script>
+		<script>
+			(function floppybards(window, document, container) {
+	'use strict';
+	
+	console.log('initing');
+	
+	function initCanvas(window, document) {
+		var canvas = document.createElement('canvas');
+		
+		function setSize() {	
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		}
+		
+		setSize();
+		
+		window.addEventListener('resize', setSize);
+		window.addEventListener('orientationchange', setSize);
+		
+		return canvas;
+	}
+	
+	function renderToCanvas(width, height, renderFunction) {
+		var buffer = document.createElement('canvas');
+		buffer.width = width;
+		buffer.height = height;
+		renderFunction(buffer.getContext('2d'));
+		
+		return buffer;
+	}
+	
+	var canvas = initCanvas(window, document);
+	
+	var context = canvas.getContext('2d');
+	
+	var background;
+	
+	function initFrame(context, canvas, color) {
+		context.fillStyle = color;
+		context.fillRect(0, 0, canvas.width, canvas.height);
+		if (false && Math.floor(context.viewport.x) % Math.floor(10 * (canvas.width / 1000))) {
+			background = renderToCanvas(1000 * (canvas.width / 1000), 1000 * (canvas.height / 1000), function (innerContext) {
+				innerContext.fillStyle = color;
+				innerContext.fillRect(0, 0, 1000 * (canvas.width / 1000), 1000 * (canvas.height / 1000));
+				innerContext.translate(10 * (canvas.width / 1000), 0);
+				innerContext.drawImage(background, 0, 0);
+			});
+		}
+		
+		context.drawImage(background, 0, 0);
+	}
+
+	container.appendChild(canvas);
+		
+	function createBard() {
+		return {
+			x: 700,
+			y: 500,
+			w: 50,
+			h: 50,
+			velocity: {x: -2, y: 0},
+			dead: false,
+			color: 'rgba(255, 128, 128, 1)'
+		};
+	}
+	
+	function drawRect(context, rect) {
+		context.save();
+		context.translate(rect.x * (canvas.width / 1000), rect.y * (canvas.height / 1000));
+		context.fillStyle = rect.color;
+		context.fillRect(
+			0,
+			0,
+			rect.w * (canvas.width / 1000),
+			rect.h * (canvas.height / 1000)
+		);
+		context.restore();
+	}
+	
+	function drawBard(context, bard) {
+		context.save();
+		context.translate(bard.x * (canvas.width / 1000), bard.y * (canvas.height / 1000));
+		
+		context.fillStyle = 'rgb(150, 50, 50)';
+		context.fillRect(
+			0,
+			0,
+			bard.w * (canvas.width / 1000),
+			bard.h * (canvas.height / 1000)
+		);
+		
+		var spacing = bard.velocity.y < 3 ? bard.velocity.y : 3;
+		
+		context.fillRect(
+			22 * (canvas.width / 1000),
+			bard.h * (canvas.height / 1000) - 1,
+			7 * (canvas.width / 1000),
+			(15 + spacing / 2) * (canvas.height / 1000)
+		);
+		
+		context.fillRect(
+			25 * (canvas.width / 1000),
+			(8 + bard.h - (spacing/1.5)) * (canvas.height / 1000) - 1,
+			7 * (canvas.width / 1000),
+			15 * (canvas.height / 1000)
+		);
+		
+		context.fillRect(
+			35 * (canvas.width / 1000),
+			bard.h * (canvas.height / 1000) - 1,
+			9 * (canvas.width / 1000),
+			(16 + spacing / 2) * (canvas.height / 1000)
+		);
+		
+		context.fillRect(
+			40 * (canvas.width / 1000),
+			(11 + bard.h - (spacing / 1.5)) * (canvas.height / 1000) - 1,
+			9 * (canvas.width / 1000),
+			(15) * (canvas.height / 1000)
+		);
+		
+		context.rotate(Math.atan2(-bard.velocity.y, -bard.velocity.x));
+		context.fillStyle = bard.color;
+		context.fillRect(
+			0,
+			0,
+			bard.w / 1.5 * (canvas.width / 1000),
+			bard.h / 1.5 * (canvas.height / 1000)
+		);
+		context.restore();
+	}
+	
+	function applyGravity(bard) {
+		bard.velocity.y += 0.1 + (Math.abs(bard.velocity.y) * 0.01);
+		
+		return bard;
+	}
+	
+	function applyVelocity(bard) {
+		bard.x += bard.velocity.x;
+		bard.y += bard.velocity.y;
+		
+		return bard;
+	}
+	
+	function jump(bard) {
+		if (bard.dead === false) {
+			if (bard.velocity.y > 0) {
+				bard.velocity.y = 0;
+			}
+			
+			bard.velocity.y -= 4.5;
+		}
+		
+		return bard;
+	}
+	
+	function telp(bard) {
+		if (bard.dead === false) {
+			var angle = Math.atan2(-bard.velocity.y, -bard.velocity.x);
+			bard.x -= Math.cos(angle) * 200;
+			bard.y -= Math.sin(angle) * 200;
+		}
+		
+		return bard;
+	}
+	
+	var bardJump = function bardJump() {
+		bard = jump(bard);
+	};
+	
+	canvas.addEventListener('click', bardJump);
+	
+	canvas.addEventListener('contextmenu', function(event) {
+			event.preventDefault();
+			telp(bard);
+			return false;
+	});
+	
+	canvas.addEventListener('touchstart', function(event) {
+		if (event.touches.length > 1) {
+			telp(bard);
+		}
+	});
+	
+	var timer = null;
+	
+	function beginStartNewGame() {
+		bard.velocity.x = 0;
+		bard.velocity.y = 0;
+		
+		timer = setTimeout(startNewGame, 1000);
+	}
+	
+	function generateRandomColor(bottom, top) {
+		bottom = bottom || 0;
+		top = top || 255;
+		console.log(bottom + Math.floor(Math.random() * (top - bottom)));
+		return 'rgb(' + Math.floor(Math.random() * (top - bottom) + bottom) + ', ' + Math.floor(Math.random() * (top - bottom) + bottom) + ', ' + Math.floor(Math.random() * (top - bottom) + bottom) + ')';
+	}
+	
+	function checkCollision(rectA, rectB) {
+		if (rectA.x < rectB.x + rectB.w && rectA.x + rectA.w > rectB.x) {
+			if (rectA.y < rectB.y + rectB.h && rectA.y + rectA.h > rectB.y) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	var bard;
+	var buildings;
+	function startNewGame() {
+		 background = renderToCanvas(1000 * (canvas.width / 1000), 1000 * (canvas.height / 1000), function (context) {
+			context.fillRect(0, 0, 1000 * (canvas.width / 1000), 1000 * (canvas.height / 1000));
+		});
+		bard = createBard();
+		timer = null;
+		context.viewport = {x: 0, y: 0};
+		buildings = [
+			{x: 0, y: 0, w: 50, h: 300, color: generateRandomColor()},
+			{x: 150, y: 700, w: 50, h: 300, color: generateRandomColor()},
+			{x: 300, y: 0, w: 50, h: 300, color: generateRandomColor()},
+			{x: 450, y: 700, w: 50, h: 300, color: generateRandomColor()},
+			{x: 600, y: 0, w: 50, h: 300, color: generateRandomColor()},
+			{x: 750, y: 700, w: 50, h: 300, color: generateRandomColor()},
+			{x: 900, y: 0, w: 50, h: 300, color: generateRandomColor()},
+			{x: 1050, y: 700, w: 50, h: 300, color: generateRandomColor()}
+		];
+	}
+	
+	function drawBuilding(building) {
+		drawRect(context, building);
+	}
+	
+	function generateBuilding(xOffset, buildings) {
+		var total = 100 + Math.floor(Math.random() * 300) + Math.floor(Math.random() * 300);
+		var width = 50 + Math.floor(Math.random() + 0.5) * Math.floor(Math.random() * 200);
+		if (width > total - 50) {
+			width = total - 50;
+		}
+		var height = 50 + total - width;
+		
+		var newBuilding = {
+			x: xOffset - width - Math.floor(Math.random() * 200),
+			y: Math.floor(Math.random() + 0.5) * 600 + -200 + Math.floor(Math.random() * 400),
+			w: width,
+			h: height,
+			color: generateRandomColor(25, 200)
+		};
+		console.log(newBuilding.color);
+
+		if (width >= 90) {
+			buildings.forEach(function(building) {
+				var hurtbox = {x: newBuilding.x, y: newBuilding.y, w: newBuilding.w, h: newBuilding.h};
+				hurtbox.x -= 20;
+				hurtbox.y -= 160;
+				hurtbox.w += 40;
+				hurtbox.h += 320;
+				
+				while (checkCollision(hurtbox, building)) {
+					if (newBuilding.y + newBuilding.h / 2 < 500) {
+						hurtbox.y -= 1;
+						newBuilding.y -= 1;
+					} else {
+						hurtbox.y += 1;
+						newBuilding.y += 1;
+					}
+				};
+			});
+		}
+		
+		return newBuilding;
+	}
+	
+	var extraBuilding = 15;
+	var speedUp = 1000;
+	var highscore = 0;
+	
+	function refresh() {
+		var base = Math.floor(Math.abs(Math.sin((context.viewport.x) / 1500) * 78));
+		
+		var r = Math.floor(Math.abs(Math.sin((context.viewport.x) / 1000) * 30));
+		var g = Math.floor(Math.abs(Math.sin((context.viewport.x) / 800) * 30));
+		var b = Math.floor(Math.abs(Math.sin((context.viewport.x) / 600) * 30));
+		initFrame(context, canvas, 'rgba(' + (base + r) + ', ' + (base + g) + ', ' + (base + b) + ', 1)');
+		
+		if (context.viewport.x < -bard.x + 800) {
+			context.viewport.x += 1 + ((-bard.x + 800) - context.viewport.x) * 0.05;
+		}
+		
+		speedUp--;
+		
+		if (speedUp <= 0) {
+			speedUp = Math.floor(Math.random() * 500) + 500;
+			
+			bard.velocity.x -= 0.5;
+		}
+		
+		bard = applyGravity(bard);
+		bard = applyVelocity(bard);
+		
+		if (-bard.x + 700 > highscore) {
+			highscore = Math.floor(-bard.x + 700);
+		}
+		
+		buildings.forEach(function(building) {
+			if (checkCollision(bard, building, context.viewport)) {
+				bard.dead = true;
+			}
+		});
+		
+		buildings = buildings.map(function(building) {
+			if (building.x + context.viewport.x > 1000) {
+				extraBuilding -= 1;
+				return generateBuilding(-context.viewport.x, buildings);
+			}
+			
+			return building;
+		});
+		
+		if (extraBuilding === 0) {
+			extraBuilding = Math.floor(Math.random() * 5) + 13;
+			buildings.push(generateBuilding(-context.viewport.x, buildings));
+		}
+		
+		if (bard.y + bard.h < 0 || bard.y > 1000) {
+			bard.dead = true;
+		}
+		
+		if (bard.dead === true && timer === null) {
+			beginStartNewGame();
+		}
+		
+		context.save();
+		context.translate(context.viewport.x * (canvas.width / 1000), context.viewport.y * (canvas.height / 1000));
+		buildings.forEach(drawBuilding);
+		
+		drawBard(context, bard);
+		context.restore();
+		
+		context.font = '28px sans-serif';
+		context.fillStyle = 'rgb(230, 230, 230)';
+		context.fillText('Score: ' + Math.floor(-bard.x + 700), 62, 30);
+		context.fillText('Highscore: ' + highscore, 10, 60);
+		
+		window.requestAnimationFrame(refresh);
+	}
+		
+	startNewGame();
+	refresh();
+}(window, document, document.body));
+</script>
+	</body>
+</html>
